@@ -99,7 +99,7 @@ namespace EnhancedHearseAI
 
             if (target == 0)
             {
-                if ((current != 0 && WithinPrimaryRange(current)) || _checkups.Count == 0)
+                if ((current != 0 && !SkylinesOverwatch.Data.Instance.IsBuildingWithDead(current) && WithinPrimaryRange(current)) || _checkups.Count == 0)
                     target = current;
                 else
                 {
@@ -130,22 +130,19 @@ namespace EnhancedHearseAI
 
         private ushort GetClosestTarget(Vehicle hearse, ref Dictionary<ushort, float> targets)
         {
-            ushort target = 0;
-
             Building[] buildings = Singleton<BuildingManager>.instance.m_buildings.m_buffer;
 
             List<ushort> removals = new List<ushort>();
 
-            float distance;
-
-            if (hearse.m_targetBuilding == 0)
-                distance = float.PositiveInfinity;
-            else 
-                distance = (hearse.GetLastFramePosition() - buildings[hearse.m_targetBuilding].m_position).sqrMagnitude;
+            ushort target = 0;
+            float distance = float.PositiveInfinity;
 
             foreach (ushort id in targets.Keys)
             {
-                if (!SkylinesOverwatch.Data.Instance.IsBuildingsWithDead(id))
+                if (distance <= 200)
+                    break;
+
+                if (!SkylinesOverwatch.Data.Instance.IsBuildingWithDead(id))
                 {
                     removals.Add(id);
                     continue;
@@ -159,8 +156,8 @@ namespace EnhancedHearseAI
                 if (d > (targets[id] + 100))
                     continue;
 
-                distance = d;
                 target = id;
+                distance = d;
             }
 
             foreach (ushort id in removals)

@@ -189,7 +189,7 @@ namespace EnhancedHearseAI
             {
                 foreach (ushort id in _cemeteries.Keys)
                 {
-                    if (data.IsBuildingsWithDead(pickup))
+                    if (data.IsBuildingWithDead(pickup))
                         _cemeteries[id].AddPickup(pickup);
                     else
                         _cemeteries[id].AddCheckup(pickup);
