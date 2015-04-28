@@ -216,10 +216,10 @@ namespace EnhancedHearseAI
                 if (v.Info.m_vehicleAI.GetLocalizedStatus(id, ref v, out instanceID) != _collecting) 
                     continue;
                 
-                ushort pickup = _cemeteries[v.m_sourceBuilding].GetClosestPickup(v);
+                ushort target = _cemeteries[v.m_sourceBuilding].AssignTarget(v);
 
-                if (pickup != 0 && pickup != v.m_targetBuilding)
-                    v.Info.m_vehicleAI.SetTarget(id, ref vehicles[id], pickup);
+                if (target != 0 && target != v.m_targetBuilding)
+                    v.Info.m_vehicleAI.SetTarget(id, ref vehicles[id], target);
             }
         }
     }
