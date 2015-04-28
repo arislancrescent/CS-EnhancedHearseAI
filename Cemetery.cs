@@ -99,7 +99,7 @@ namespace EnhancedHearseAI
 
             if (target == 0)
             {
-                if ((current != 0 && !SkylinesOverwatch.Data.Instance.IsBuildingWithDead(current) && WithinPrimaryRange(current)) || _checkups.Count == 0)
+                if ((current != 0 && WithinPrimaryRange(current)) || _checkups.Count == 0)
                     target = current;
                 else
                 {
@@ -135,26 +135,53 @@ namespace EnhancedHearseAI
             List<ushort> removals = new List<ushort>();
 
             ushort target = 0;
+            Vector3 targetP;
             float distance = float.PositiveInfinity;
+            double atan2 = double.PositiveInfinity;
 
+            Vector3 position = hearse.GetLastFramePosition();
+
+            if (targets.ContainsKey(hearse.m_targetBuilding))
+            {
+                if (!SkylinesOverwatch.Data.Instance.IsBuildingWithDead(hearse.m_targetBuilding))
+                    removals.Add(hearse.m_targetBuilding);
+                else
+                {
+                    target = hearse.m_targetBuilding;
+                    targetP = buildings[target].m_position;
+                    distance = (targetP - position).sqrMagnitude;
+                    atan2 = Math.Atan2(targetP.z - position.z, targetP.x - position.x);
+                }
+            }
+            
             foreach (ushort id in targets.Keys)
             {
                 if (distance <= 200)
                     break;
-
+                
                 if (!SkylinesOverwatch.Data.Instance.IsBuildingWithDead(id))
                 {
                     removals.Add(id);
                     continue;
                 }
 
-                float d = (hearse.GetLastFramePosition() - buildings[id].m_position).sqrMagnitude;
+                targetP = buildings[id].m_position;
+
+                float d = (targetP - position).sqrMagnitude;
 
                 if (d > (distance - 100))
                     continue;
 
-                if (d > (targets[id] + 100))
+                if (!float.IsPositiveInfinity(targets[id]) && d > 200)
                     continue;
+
+                if (!double.IsPositiveInfinity(atan2))
+                {
+                    double angle = Math.Abs(atan2 - Math.Atan2(targetP.z - position.z, targetP.x - position.x));
+
+                    if (angle > 1.5707963267948966)
+                        continue;
+                }
 
                 target = id;
                 distance = d;
