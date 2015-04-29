@@ -22,7 +22,15 @@ If a cemetery/crematorium does not belong to any district, then:
 2. Its secondary pickup zone is the rest of its effective area
 
 ## Pickup Priority
-Hearses will always prioritize corpses in their primary pickup zone. If there are no corpses left to pick up in both primary and secondary pickup zones, hearses will "patrol" their primary pickup zone.
+Hearses will always prioritize corpses in their primary pickup zone. However, there are several rules within this general rule:
+
+1. Between problematic corpses (those showing the death sign) and nonproblematic ones (those that have no visual clues), hearses will prioritize the problematic ones for pickup
+2. However, if they come across a nonproblematic one along their way, they will pick it up first; but only if it is not behind them
+3. If there is a closer corpse of the same priority, they will redirect to the closer one; but only if it is along the original bearing 
+4. If there are no corpses left to pick up, hearses will "patrol" their primary pickup zone.
+
+## Efficiency vs Urgency
+The pickup priority above exists to achieve a good balance between making the hearses as efficient as possible vs keeping your CIMs as happy as possible. When you see a death sign, that means a corpse has become a nusance and your CIMs are not happy about it. But if we were to prioritize getting rid of the death signs as fast as possible, we would have to take a large hit on overall efficiency; in fact, it would become counterproductive during death waves. On the other hand, if we were to do the opposite, then we would be ensuring maximum efficiency at the risk of losing buildings to abandonment. The existing setup benefits from both approaches by prioritizing problematic corpses for overall bearing, but at the same time allowing pickups of nonproblematic corpses along the way.
 
 ## Conflict Resolution
 Each cemetery/crematorium gets its own dispatcher. The dispatcher will try to maximize the efficiency of all its hearses, i.e., reduce the chance that two hearses will be sent to the same location for pick up. HOWEVER, just like in real life, the dispatchers of different cemeteries/crematoriums will not call each other constantly to make sure they are not all dispatching for the same corpse. So, if you have multiple cemeteries right next to each other, it is possible that a corpse will be fought over by hearses from different cemeteries. With that said, it shouldn't be a common occurrence.
