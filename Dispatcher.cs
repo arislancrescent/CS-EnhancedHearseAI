@@ -23,6 +23,7 @@ namespace EnhancedHearseAI
         private bool _terminated;
 
         private Dictionary<ushort, Cemetery> _cemeteries;
+        private Dictionary<ushort, float> _master;
 
         protected bool IsOverwatched()
         {
@@ -91,6 +92,7 @@ namespace EnhancedHearseAI
                     SkylinesOverwatch.Settings.Instance.Enable.VehicleMonitor = true;
 
                     _cemeteries = new Dictionary<ushort, Cemetery>();
+                    _master = new Dictionary<ushort, float>();
 
                     _initialized = true;
 
@@ -140,7 +142,7 @@ namespace EnhancedHearseAI
             SkylinesOverwatch.Data data = SkylinesOverwatch.Data.Instance;
 
             foreach (ushort id in data.Cemeteries)
-                _cemeteries.Add(id, new Cemetery(id));
+                _cemeteries.Add(id, new Cemetery(id, ref _master));
 
             foreach (ushort pickup in data.BuildingsWithDead)
             {
@@ -163,7 +165,7 @@ namespace EnhancedHearseAI
                 if (_cemeteries.ContainsKey(x))
                     continue;
                 
-                _cemeteries.Add(x, new Cemetery(x));
+                _cemeteries.Add(x, new Cemetery(x, ref _master));
 
                 foreach (ushort pickup in data.BuildingsWithDead)
                 {
@@ -187,11 +189,22 @@ namespace EnhancedHearseAI
 
             foreach (ushort pickup in data.BuildingsUpdated)
             {
-                foreach (ushort id in _cemeteries.Keys)
+                if (data.IsBuildingWithDead(pickup))
                 {
-                    if (data.IsBuildingWithDead(pickup))
+                    if (_master.ContainsKey(pickup))
+                    {
+                        if (float.IsNegativeInfinity(_master[pickup]))
+                            _master[pickup] = float.PositiveInfinity;
+                        else if (_master[pickup] <= 400)
+                            _master[pickup] = float.NegativeInfinity;
+                    }
+                    
+                    foreach (ushort id in _cemeteries.Keys)
                         _cemeteries[id].AddPickup(pickup);
-                    else
+                }
+                else
+                {
+                    foreach (ushort id in _cemeteries.Keys)
                         _cemeteries[id].AddCheckup(pickup);
                 }
             }

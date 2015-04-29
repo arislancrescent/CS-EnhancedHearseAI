@@ -15,28 +15,33 @@ namespace EnhancedHearseAI
     {
         private readonly ushort _id;
 
-        private Dictionary<ushort, float> _primary;
-        private Dictionary<ushort, float> _secondary;
+        private Dictionary<ushort, float> _master;
+        private HashSet<ushort> _primary;
+        private HashSet<ushort> _secondary;
         private List<ushort> _checkups;
 
-        public Cemetery(ushort id)
+        public Cemetery(ushort id, ref Dictionary<ushort, float> master)
         {
             _id = id;
 
-            _primary = new Dictionary<ushort, float>();
-            _secondary = new Dictionary<ushort, float>();
+            _master = master;
+            _primary = new HashSet<ushort>();
+            _secondary = new HashSet<ushort>();
             _checkups = new List<ushort>();
         }
 
         public void AddPickup(ushort id)
         {
-            if (_primary.ContainsKey(id) || _secondary.ContainsKey(id))
+            if (!_master.ContainsKey(id))
+                _master.Add(id, float.PositiveInfinity);
+
+            if (_primary.Contains(id) || _secondary.Contains(id))
                 return;
 
             if (WithinPrimaryRange(id))
-                _primary.Add(id, float.PositiveInfinity);
+                _primary.Add(id);
             else if (WithinSecondaryRange(id))
-                _secondary.Add(id, float.PositiveInfinity);
+                _secondary.Add(id);
         }
 
         public void AddCheckup(ushort id)
@@ -99,7 +104,7 @@ namespace EnhancedHearseAI
 
             if (target == 0)
             {
-                if ((current != 0 && WithinPrimaryRange(current)) || _checkups.Count == 0)
+                if ((current != 0 && !SkylinesOverwatch.Data.Instance.IsBuildingWithDead(current) && WithinPrimaryRange(current)) || _checkups.Count == 0)
                     target = current;
                 else
                 {
@@ -111,53 +116,59 @@ namespace EnhancedHearseAI
             {
                 if (target != current)
                 {
-                    if (_primary.ContainsKey(current))
-                        _primary[current] = float.PositiveInfinity;
-                    else if (_secondary.ContainsKey(current))
-                        _secondary[current] = float.PositiveInfinity;
+                    if (_master.ContainsKey(current))
+                        _master[current] = float.PositiveInfinity;
                 }
 
                 float distance = (hearse.GetLastFramePosition() - buildings[target].m_position).sqrMagnitude;
 
-                if (_primary.ContainsKey(target))
-                    _primary[target] = distance;
-                else if (_secondary.ContainsKey(target))
-                    _secondary[target] = distance;
+                if (_master.ContainsKey(target))
+                    _master[target] = distance;
             }
 
             return target;
         }
 
-        private ushort GetClosestTarget(Vehicle hearse, ref Dictionary<ushort, float> targets)
+        private ushort GetClosestTarget(Vehicle hearse, ref HashSet<ushort> targets)
         {
             Building[] buildings = Singleton<BuildingManager>.instance.m_buildings.m_buffer;
 
             List<ushort> removals = new List<ushort>();
 
-            ushort target = 0;
-            Vector3 targetP;
+            ushort target = hearse.m_targetBuilding;
+            bool targetProblematic = false;
             float distance = float.PositiveInfinity;
-            double atan2 = double.PositiveInfinity;
 
+            Vector3 velocity = hearse.GetLastFrameVelocity();
             Vector3 position = hearse.GetLastFramePosition();
 
-            if (targets.ContainsKey(hearse.m_targetBuilding))
+            double bearing = double.PositiveInfinity;
+            double facing = Math.Atan2(velocity.z, velocity.x);
+
+            if (targets.Contains(target))
             {
-                if (!SkylinesOverwatch.Data.Instance.IsBuildingWithDead(hearse.m_targetBuilding))
-                    removals.Add(hearse.m_targetBuilding);
+                if (!SkylinesOverwatch.Data.Instance.IsBuildingWithDead(target))
+                {
+                    removals.Add(target);
+                    target = 0;
+                }
                 else
                 {
-                    target = hearse.m_targetBuilding;
-                    targetP = buildings[target].m_position;
-                    distance = (targetP - position).sqrMagnitude;
-                    atan2 = Math.Atan2(targetP.z - position.z, targetP.x - position.x);
+                    targetProblematic = (buildings[target].m_problems & Notification.Problem.Death) != Notification.Problem.None;
+
+                    Vector3 a = buildings[target].m_position;
+
+                    distance = (a - position).sqrMagnitude;
+                    bearing = Math.Atan2(a.z - position.z, a.x - position.x);
                 }
             }
-            
-            foreach (ushort id in targets.Keys)
+            else
+                target = 0;
+
+            foreach (ushort id in targets)
             {
-                if (distance <= 200)
-                    break;
+                if (target == id)
+                    continue;
                 
                 if (!SkylinesOverwatch.Data.Instance.IsBuildingWithDead(id))
                 {
@@ -165,30 +176,58 @@ namespace EnhancedHearseAI
                     continue;
                 }
 
-                targetP = buildings[id].m_position;
+                Vector3 p = buildings[id].m_position;
+                float d = (p - position).sqrMagnitude;
 
-                float d = (targetP - position).sqrMagnitude;
+                bool candidateProblematic = (buildings[id].m_problems & Notification.Problem.Death) != Notification.Problem.None;
 
-                if (d > (distance - 100))
-                    continue;
-
-                if (!float.IsPositiveInfinity(targets[id]) && d > 200)
-                    continue;
-
-                if (!double.IsPositiveInfinity(atan2))
+                if (!float.IsPositiveInfinity(_master[id]))
                 {
-                    double angle = Math.Abs(atan2 - Math.Atan2(targetP.z - position.z, targetP.x - position.x));
+                    if (d > 2500 || d > _master[id])
+                        continue;
+
+                    if (d > distance)
+                        continue;
+
+                    double angle = Math.Abs(facing - Math.Atan2(p.z - position.z, p.x - position.x));
 
                     if (angle > 1.5707963267948966)
                         continue;
                 }
+                else
+                {
+                    if (targetProblematic && !candidateProblematic)
+                        continue;
+
+                    if (!targetProblematic && candidateProblematic)
+                    {
+                        // No additonal conditions at the moment. Problematic buildings always have priority over nonproblematic buildings
+                    }
+                    else
+                    {
+                        if (d > (distance * 0.9))
+                            continue;
+
+                        if (!double.IsPositiveInfinity(bearing))
+                        {
+                            double angle = Math.Abs(bearing - Math.Atan2(p.z - position.z, p.x - position.x));
+
+                            if (angle > 1.5707963267948966)
+                                continue;
+                        }
+                    }
+                }
 
                 target = id;
+                targetProblematic = candidateProblematic;
                 distance = d;
             }
 
             foreach (ushort id in removals)
+            {
+                _master.Remove(id);
                 targets.Remove(id);
+            }
 
             return target;
         }
