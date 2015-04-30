@@ -24,6 +24,7 @@ namespace EnhancedHearseAI
 
         private Dictionary<ushort, Cemetery> _cemeteries;
         private Dictionary<ushort, float> _master;
+        private HashSet<ushort> _stopped;
 
         protected bool IsOverwatched()
         {
@@ -93,6 +94,7 @@ namespace EnhancedHearseAI
 
                     _cemeteries = new Dictionary<ushort, Cemetery>();
                     _master = new Dictionary<ushort, float>();
+                    _stopped = new HashSet<ushort>();
 
                     _initialized = true;
 
@@ -222,6 +224,25 @@ namespace EnhancedHearseAI
                     continue;
 
                 Vehicle v = vehicles[id];
+
+                /* 
+                 * If a hearse is loading corpse, we will remove it from the vehicle grid,
+                 * so other cars can pass it and more than one hearse can service a building.
+                 * It doesn't really make sense that only one hearse can be at a high rise
+                 * at a time.
+                 */
+                if ((v.m_flags & Vehicle.Flags.Stopped) != Vehicle.Flags.None)
+                {                  
+                    if (!_stopped.Contains(id))
+                    {
+                        Singleton<VehicleManager>.instance.RemoveFromGrid(id, ref vehicles[id], false);
+                        _stopped.Add(id);
+                    }
+
+                    continue;
+                }
+                else
+                    _stopped.Remove(id);
 
                 if (!_cemeteries.ContainsKey(v.m_sourceBuilding))
                     continue;
