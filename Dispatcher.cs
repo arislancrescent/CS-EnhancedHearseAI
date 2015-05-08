@@ -83,7 +83,7 @@ namespace EnhancedHearseAI
                 {
                     if (!IsOverwatched())
                     {
-                        _helper.Log("Skylines Overwatch not found. Terminating...");
+                        _helper.NotifyPlayer("Skylines Overwatch not found. Terminating...");
                         _terminated = true;
 
                         return;
@@ -98,7 +98,7 @@ namespace EnhancedHearseAI
 
                     _initialized = true;
 
-                    _helper.Log("Initialized");
+                    _helper.NotifyPlayer("Initialized");
                 }
                 else if (!_baselined)
                 {
@@ -116,7 +116,7 @@ namespace EnhancedHearseAI
             }
             catch (Exception e)
             {
-                string error = "Failed to initialize\r\n";
+                string error = String.Format("Failed to {0}\r\n", !_initialized ? "initialize" : "updated");
                 error += String.Format("Error: {0}\r\n", e.Message);
                 error += "\r\n";
                 error += "==== STACK TRACE ====\r\n";
@@ -124,7 +124,8 @@ namespace EnhancedHearseAI
 
                 _helper.Log(error);
 
-                _terminated = true;
+                if (!_initialized)
+                    _terminated = true;
             }
 
             base.OnUpdate(realTimeDelta, simulationTimeDelta);
