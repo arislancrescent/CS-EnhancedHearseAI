@@ -171,10 +171,7 @@ namespace EnhancedHearseAI
                 _cemeteries.Add(x, new Cemetery(x, ref _master));
 
                 foreach (ushort pickup in data.BuildingsWithDead)
-                {
-                    foreach (ushort id in _cemeteries.Keys)
-                        _cemeteries[id].AddPickup(pickup);
-                }
+                    _cemeteries[x].AddPickup(pickup);
             }
         }
 
