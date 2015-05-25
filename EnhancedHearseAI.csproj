@@ -57,6 +57,7 @@
     <Compile Include="Settings.cs" />
     <Compile Include="Dispatcher.cs" />
     <Compile Include="Cemetery.cs" />
+    <Compile Include="Claimant.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

@@ -23,7 +23,7 @@ namespace EnhancedHearseAI
         private bool _terminated;
 
         private Dictionary<ushort, Cemetery> _cemeteries;
-        private Dictionary<ushort, float> _master;
+        private Dictionary<ushort, Claimant> _master;
         private HashSet<ushort> _stopped;
 
         protected bool IsOverwatched()
@@ -93,7 +93,7 @@ namespace EnhancedHearseAI
                     SkylinesOverwatch.Settings.Instance.Enable.VehicleMonitor = true;
 
                     _cemeteries = new Dictionary<ushort, Cemetery>();
-                    _master = new Dictionary<ushort, float>();
+                    _master = new Dictionary<ushort, Claimant>();
                     _stopped = new HashSet<ushort>();
 
                     _initialized = true;
@@ -112,6 +112,21 @@ namespace EnhancedHearseAI
                     ProcessNewPickups();
 
                     UpdateHearses();
+
+                    /*
+                    if (SimulationManager.instance.SimulationPaused)
+                    {
+                        foreach (ushort id in _master.Keys)
+                        {
+                            string name = Singleton<BuildingManager>.instance.GetBuildingName(id, new InstanceID { Building = id });
+
+                            if (!name.Contains("##"))
+                                continue;
+
+                            _helper.NotifyPlayer(String.Format("{0} ({1}) {2}/{3}", _master[id].Hearse, Math.Sqrt(_master[id].Distance), _master[id].IsValid, _master[id].IsChallengable));
+                        }
+                    }
+                    */
                 }
             }
             catch (Exception e)
@@ -189,22 +204,11 @@ namespace EnhancedHearseAI
 
             foreach (ushort pickup in data.BuildingsUpdated)
             {
-                if (data.IsBuildingWithDead(pickup))
+                foreach (ushort id in _cemeteries.Keys)
                 {
-                    if (_master.ContainsKey(pickup))
-                    {
-                        if (float.IsNegativeInfinity(_master[pickup]))
-                            _master[pickup] = float.PositiveInfinity;
-                        else if (_master[pickup] <= 400)
-                            _master[pickup] = float.NegativeInfinity;
-                    }
-                    
-                    foreach (ushort id in _cemeteries.Keys)
+                    if (data.IsBuildingWithDead(pickup))
                         _cemeteries[id].AddPickup(pickup);
-                }
-                else
-                {
-                    foreach (ushort id in _cemeteries.Keys)
+                    else
                         _cemeteries[id].AddCheckup(pickup);
                 }
             }
@@ -248,7 +252,7 @@ namespace EnhancedHearseAI
                 if (v.Info.m_vehicleAI.GetLocalizedStatus(id, ref v, out instanceID) != _collecting) 
                     continue;
                 
-                ushort target = _cemeteries[v.m_sourceBuilding].AssignTarget(v);
+                ushort target = _cemeteries[v.m_sourceBuilding].AssignTarget(id);
 
                 if (target != 0 && target != v.m_targetBuilding)
                     v.Info.m_vehicleAI.SetTarget(id, ref vehicles[id], target);
