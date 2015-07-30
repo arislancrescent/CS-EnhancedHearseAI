@@ -13,13 +13,13 @@ namespace EnhancedHearseAI
 {
     public class Cemetery
     {
-        private enum SearchDirection
+        [Flags]
+        private enum SearchDirection : byte
         {
-            None,
-            Left,
-            Right,
-            Both,
-            Error
+            None    = 0,
+            Ahead   = 1,
+            Left    = 2,
+            Right   = 4
         }
 
         private readonly ushort _id;
@@ -123,7 +123,7 @@ namespace EnhancedHearseAI
             bool immediateOnly = _primary.Contains(current) || _secondary.Contains(current);
             SearchDirection immediateDirection = GetImmediateSearchDirection(hearseID);
 
-            if (immediateOnly && (immediateDirection == SearchDirection.None || immediateDirection == SearchDirection.Error))
+            if (immediateOnly && immediateDirection == SearchDirection.None)
                 target = current;
             else
             {
@@ -201,28 +201,29 @@ namespace EnhancedHearseAI
                 }
             }
 
-            SearchDirection dir = SearchDirection.Error;
+            SearchDirection dir = SearchDirection.None;
 
             if (laneCount == 0)
             {
-                dir = SearchDirection.None;
             }
             else if (position.m_lane != leftLane && position.m_lane != rightLane)
             {
-                dir = SearchDirection.None;
+                dir = SearchDirection.Ahead;
             }
             else if (leftLane == rightLane)
             {
-                dir = SearchDirection.Both;
+                dir = SearchDirection.Left | SearchDirection.Right | SearchDirection.Ahead;
             }
             else if (laneCount == 2 && segment.Info.m_lanes[leftLane].m_direction != segment.Info.m_lanes[rightLane].m_direction)
-                dir = SearchDirection.Both;
+            {
+                dir = SearchDirection.Left | SearchDirection.Right | SearchDirection.Ahead;
+            }
             else 
             {   
                 if (position.m_lane == leftLane)
-                    dir = SearchDirection.Left;
+                    dir = SearchDirection.Left | SearchDirection.Ahead;
                 else
-                    dir = SearchDirection.Right;
+                    dir = SearchDirection.Right | SearchDirection.Ahead;
             }
 
             return dir;
@@ -381,19 +382,15 @@ namespace EnhancedHearseAI
 
             if (distance < Settings.Instance.ImmediateRange1)
             {
-                // Restrict to 90 degrees of the side the vehicle is allowed to search on
-                if (immediateDirection == SearchDirection.Left)
-                    r = 0;
-                else if (immediateDirection == SearchDirection.Right)
-                    l = 0;
+                // Prevent searching on the non-neighboring side
+                if ((immediateDirection & SearchDirection.Left) == SearchDirection.None)    l = 0;
+                if ((immediateDirection & SearchDirection.Right) == SearchDirection.None)   r = 0;
             }
-            else if (distance < Settings.Instance.ImmediateRange2)
+            else if (distance < Settings.Instance.ImmediateRange2 && (immediateDirection & SearchDirection.Ahead) != SearchDirection.None)
             {
-                // Restrict the search on the opposite side to 60 degrees to give enough space for merging
-                if (immediateDirection == SearchDirection.Left)
-                    r = 1.0471975512;
-                else if (immediateDirection == SearchDirection.Right)
-                    l = -1.0471975512;
+                // Restrict the search on the non-neighboring side to 60 degrees to give enough space for merging
+                if ((immediateDirection & SearchDirection.Left) == SearchDirection.None)    l = -1.0471975512;
+                if ((immediateDirection & SearchDirection.Right) == SearchDirection.None)   r = 1.0471975512;
             }
             else 
                 return false;
