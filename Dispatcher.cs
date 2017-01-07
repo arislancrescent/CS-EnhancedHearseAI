@@ -233,7 +233,7 @@ namespace EnhancedHearseAI
                  * It doesn't really make sense that only one hearse can be at a high rise
                  * at a time.
                  */
-                if ((v.m_flags & Vehicle.Flags.Stopped) != Vehicle.Flags.None)
+                if (v.m_flags.IsFlagSet(Vehicle.Flags.Stopped))
                 {                  
                     if (!_stopped.Contains(id))
                     {
